@@ -1,10 +1,24 @@
 self.addEventListener('fetch', (event) => {
-    // return selective request hijacker, jpg files
-    if (event.request.url.endsWith('.jpg')) {
-        event.respondWith(
-            fetch('/imgs/dr-evil.gif')
-        );
-    }
+    event.respondWith(
+        fetch(event.request)
+            .then(res => {
+                if (res.status == 404) {
+                    return fetch('/imgs/dr-evil.gif');
+                }
+                return res;
+            }).catch(
+            () => {
+                return new Response("Uh oh, that's totally failed");
+            }
+        )
+    );
+
+    // return selective request hijacker jpg files and replace with gif
+    // if (event.request.url.endsWith('.jpg')) {
+    //     event.respondWith(
+    //         fetch('/imgs/dr-evil.gif')
+    //     );
+    // }
 
   // return HTML static page
   // event.respondWith(
