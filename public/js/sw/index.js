@@ -1,6 +1,4 @@
-var staticCacheName = 'wittr-static-v2';
-
-// change in SW to trigger update-notify
+var staticCacheName = 'wittr-static-v3';
 
 self.addEventListener('install', function(event) {
     event.waitUntil(
@@ -38,4 +36,12 @@ self.addEventListener('fetch', function(event) {
             return response || fetch(event.request);
         })
     );
+});
+
+// TODO: listen for the "message" event, and call
+// skipWaiting if you get the appropriate message
+self.addEventListener('message', function(event) {
+    if (event.data.action == 'skipWaiting') {
+        self.skipWaiting();
+    }
 });
