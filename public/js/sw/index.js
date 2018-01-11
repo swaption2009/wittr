@@ -1,29 +1,24 @@
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request)
-            .then(res => {
-                if (res.status == 404) {
-                    return fetch('/imgs/dr-evil.gif');
-                }
-                return res;
-            }).catch(
-            () => {
-                return new Response("Uh oh, that's totally failed");
-            }
-        )
-    );
+self.addEventListener('install', function(event) {
+  var urlsToCache = [
+    '/',
+    'js/main.js',
+    'css/main.css',
+    'imgs/icon.png',
+    'https://fonts.gstatic.com/s/roboto/v15/2UX7WLTfW3W8TclTUvlFyQ.woff',
+    'https://fonts.gstatic.com/s/roboto/v15/d-6IYplOFocCacKzxwXSOD8E0i7KZn-EPnyo3HZu7kw.woff'
+  ];
 
-    // return selective request hijacker jpg files and replace with gif
-    // if (event.request.url.endsWith('.jpg')) {
-    //     event.respondWith(
-    //         fetch('/imgs/dr-evil.gif')
-    //     );
-    // }
+  event.waitUntil(
+    // TODO: open a cache named 'wittr-static-v1'
+    // Add cache the urls from urlsToCache
+      caches.open('wittr-static-v1')
+          .then(cache => {
+              return cache.addAll(urlsToCache);
+          })
+  );
+});
 
-  // return HTML static page
-  // event.respondWith(
-  //     new Response("<h1 class='a-winner-is-me'>This is a class</h1>", {
-  //         headers: {'Content-Type': 'text/html'}
-  //     })
-  // );
+self.addEventListener('fetch', function(event) {
+  // Leave this blank for now.
+  // We'll get to this in the next task.
 });
