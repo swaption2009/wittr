@@ -10,11 +10,11 @@ var dbPromise = idb.open('test-db', 4, function(upgradeDb) {
         case 2:
             var peopleStore = upgradeDb.transaction.objectStore('people');
             peopleStore.createIndex('animal', 'favoriteAnimal');
+        // TODO: create an index on 'people' named 'age', ordered by 'age'
         case 3:
             peopleStore = upgradeDb.transaction.objectStore('people');
             peopleStore.createIndex('age', 'age');
     }
-    // TODO: create an index on 'people' named 'age', ordered by 'age'
 });
 
 // read "hello" in "keyval"
@@ -99,4 +99,22 @@ dbPromise.then(function(db) {
     return ageIndex.getAll();
 }).then(function (people) {
     console.log('People by age: ', people);
+});
+
+// TODO: loop through with openCursor()
+dbPromise.then(function(db) {
+    var tx = db.transaction('people');
+    var peopleStore = tx.objectStore('people');
+    var ageIndex = peopleStore.index('age');
+
+    return ageIndex.openCursor();
+}).then(function logPerson(cursor) {
+    if (!cursor) return;
+    console.log('Cursored at:', cursor.value.name);
+    // allows any operations inside the loop
+    // cursor.update(newValue)
+    // cursor.delete()
+    // cursor.advance(2)
+}).then(function() {
+   console.log('Done cursoring');
 });
