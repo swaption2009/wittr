@@ -2,13 +2,34 @@ import PostsView from './views/Posts';
 import ToastsView from './views/Toasts';
 import idb from 'idb';
 
+function openDatabase() {
+    // If the browser doesn't support service worker,
+    // we don't care about having a database
+    if (!navigator.serviceWorker) {
+        return Promise.resolve();
+    }
+
+    return idb.open('wittr', 1, upgradeDb => {
+        const store = upgradeDb.createObjectStore('wittrs', {
+            keyPath: 'id'
+        });
+        store.createIndex('by-date', 'time');
+    });
+}
+
 export default function IndexController(container) {
     this._container = container;
     this._postsView = new PostsView(this._container);
     this._toastsView = new ToastsView(this._container);
     this._lostConnectionToast = null;
-    this._openSocket();
+    this._dbPromise = openDatabase();
     this._registerServiceWorker();
+
+    var indexController = this;
+
+    this._showCachedMessages().then(function() {
+        indexController._openSocket();
+    });
 }
 
 IndexController.prototype._registerServiceWorker = function() {
@@ -36,10 +57,31 @@ IndexController.prototype._registerServiceWorker = function() {
         });
     });
 
-    // TODO: listen for the controlling service worker changing
-    // and reload the page
+    // Ensure refresh is only called once.
+    // This works around a bug in "force update on reload".
+    var refreshing;
     navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (refreshing) return;
         window.location.reload();
+        refreshing = true;
+    });
+};
+
+IndexController.prototype._showCachedMessages = function() {
+    var indexController = this;
+
+    return this._dbPromise.then(function(db) {
+        // if we're already showing posts, eg shift-refresh
+        // or the very first load, there's no point fetching
+        // posts from IDB
+        if (!db || indexController._postsView.showingPosts()) return;
+
+        // TODO: get all of the wittr message objects from indexeddb,
+        // then pass them to:
+        // indexController._postsView.addPosts(messages)
+        // in order of date, starting with the latest.
+        // Remember to return a promise that does all this,
+        // so the websocket isn't opened until you're done!
     });
 };
 
@@ -59,7 +101,6 @@ IndexController.prototype._updateReady = function(worker) {
 
     toast.answer.then(function(answer) {
         if (answer != 'refresh') return;
-        // TODO: tell the service worker to skipWaiting
         worker.postMessage({action: 'skipWaiting'});
     });
 };
@@ -112,5 +153,16 @@ IndexController.prototype._openSocket = function() {
 // called when the web socket sends message data
 IndexController.prototype._onSocketMessage = function(data) {
     var messages = JSON.parse(data);
+
+    this._dbPromise.then(function(db) {
+        if (!db) return;
+
+        var tx = db.transaction('wittrs', 'readwrite');
+        var store = tx.objectStore('wittrs');
+        messages.forEach(function(message) {
+            store.put(message);
+        });
+    });
+
     this._postsView.addPosts(messages);
 };
