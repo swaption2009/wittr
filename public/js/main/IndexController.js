@@ -168,6 +168,16 @@ IndexController.prototype._onSocketMessage = function(data) {
         messages.forEach(function(message) {
             store.put(message);
         });
+
+        // TODO keep the newest 30 entries in wittrs and delete the rest
+        store.index('by-date').openCursor(null, 'prev')
+            .then(function(cursor) {
+                return cursor.advance(30);
+            })
+            .then(function deleteRest(cursor) {
+                if (!cursor) return;
+                return cursor.continue().then(deleteRest);
+            });
     });
 
     this._postsView.addPosts(messages);
